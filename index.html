@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SIM Logistik — RS KARTIKA HUSADA JATI ASIH</title>
+<meta name="description" content="Sistem Informasi Manajemen Logistik RS KARTIKA HUSADA JATI ASIH: amprahan rutin, kuota unit, persetujuan, dan laporan." />
+<script src="https://cdn.tailwindcss.com/3.4.17"></script>
+<script>
+  tailwind.config = {
+    theme: { extend: {
+      fontFamily: { sans: ["Plus Jakarta Sans","sans-serif"], display: ["Lora","serif"] },
+      colors: {
+        pbk: { bg:"#f8f7f2", fg:"#0f1b2d", primary:"#0e3a6e", primarydark:"#082548", secondary:"#e8f0fb", accent:"#f5a623", muted:"#6b7280", border:"#e5e0d5" },
+        supa: { dark:"#0e3a6e", darker:"#082548", emerald:"#1d5fb4", light:"#f8f7f2", mint:"#e8f0fb" },
+        emerald: { 50:"#eef4fc",100:"#e8f0fb",200:"#c6d9f3",300:"#9bbcec",400:"#6f9ee0",500:"#1d5fb4",600:"#164a8a",700:"#0e3a6e",800:"#082548",900:"#061b36",950:"#030f20" },
+        amber: { 50:"#fef8ec",100:"#fdeecf",200:"#fbdc9f",300:"#f9c66a",400:"#f5a623",500:"#e0930f",600:"#b8760a",700:"#8f5a08",800:"#6b4308",900:"#4a2e06" }
+      }
+    } }
+  }
+</script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+<link rel="stylesheet" href="css/style.css" />
+<link rel="icon" href="images/logo.png" type="image/png" />
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+<body class="bg-pbk-bg text-pbk-fg font-sans antialiased">
+<!-- NOTIFIKASI TOAST CUSTOM (Tanpa alert) -->
+<div class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none" id="toastContainer"></div>
+<!-- MODAL KONFIRMASI / INPUT CUSTOM -->
+<div class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 hidden items-center justify-center p-4" id="customModal">
+<div class="bg-white rounded-2xl max-w-md w-full p-6 supa-shadow animate-fade border border-slate-100">
+<div class="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
+<h3 class="text-lg font-bold text-slate-800" id="modalTitle">Konfirmasi</h3>
+<button class="text-slate-400 hover:text-slate-600" onclick="closeModal()"><i class="fa-solid fa-xmark text-lg"></i></button>
+</div>
+<div class="text-sm text-slate-600 space-y-3" id="modalBody"></div>
+<div class="mt-6 flex justify-end gap-2" id="modalFooter">
+<button class="px-4 py-2 rounded-xl text-sm font-medium bg-slate-100 text-slate-600 hover:bg-slate-200 transition" onclick="closeModal()">Batal</button>
+<button class="px-4 py-2 rounded-xl text-sm font-semibold bg-supa-emerald text-white hover:bg-emerald-600 transition" id="modalConfirmBtn">Simpan</button>
+</div>
+</div>
+</div>
+<!-- MODAL PENGATURAN IKLAN ADMIN -->
+<div class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 items-center justify-center p-4 hidden" id="adModal">
+<div class="bg-white rounded-2xl max-w-xl w-full p-6 supa-shadow animate-fade">
+<div class="flex items-center justify-between border-b border-slate-100 pb-4 mb-4">
+<div class="flex items-center gap-2.5">
+<div class="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold">
+<i class="fa-solid fa-bullhorn"></i>
+</div>
+<div>
+<h3 class="text-lg font-bold text-slate-800">Pengaturan Media Iklan &amp; Informasi Kampus</h3>
+<p class="text-xs text-slate-500">Tempel link Gambar atau Video (YouTube / MP4) untuk ditampilkan di Dashboard</p>
+</div>
+</div>
+<button class="text-slate-400 hover:text-slate-600" onclick="toggleAdModal(false)"><i class="fa-solid fa-xmark text-xl"></i></button>
+</div>
+<div class="space-y-4 text-sm">
+<div class="flex items-center justify-between bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+<div>
+<span class="font-semibold text-slate-800 block">Status Tampilan Iklan</span>
+<span class="text-xs text-slate-500">Aktifkan agar seluruh unit melihat banner/video di beranda</span>
+</div>
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" id="adEnabledInput" type="checkbox"/>
+<div class="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-supa-emerald"></div>
+</label>
+</div>
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+<div>
+<label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Jenis Media Iklan</label>
+<select class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-emerald-500 font-medium" id="adTypeInput" onchange="previewAdInModal()">
+<option value="image">Gambar / Banner Foto (JPG/PNG/WebP)</option>
+<option value="video">Video (Link YouTube / File MP4)</option>
+</select>
+</div>
+<div>
+<label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Judul / Label Pengumuman</label>
+<input class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-emerald-500" id="adTitleInput" placeholder="Contoh: Sosialisasi Akreditasi PBK" type="text"/>
+</div>
+</div>
+<div>
+<label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Tempel Link URL Gambar atau Video</label>
+<div class="flex gap-2">
+<input class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-emerald-500" id="adUrlInput" oninput="previewAdInModal()" placeholder="https://..." type="url"/>
+<button class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-medium shrink-0" onclick="setSampleAd('image')" title="Contoh Gambar" type="button">Contoh Gambar</button>
+<button class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-medium shrink-0" onclick="setSampleAd('video')" title="Contoh Video" type="button">Contoh Video</button>
+</div>
+</div>
+<div>
+<label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Link Tujuan Saat Diklik (Opsional)</label>
+<input class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-emerald-500" id="adLinkInput" placeholder="https://wa.me/6281234567890 atau link info" type="url"/>
+</div>
+<!-- Pratinjau Langsung -->
+<div class="border border-dashed border-slate-300 rounded-xl p-3 bg-slate-50">
+<span class="text-[11px] font-semibold uppercase text-slate-400 block mb-2">Pratinjau Media:</span>
+<div class="h-36 rounded-lg overflow-hidden bg-slate-200 flex items-center justify-center text-slate-500 text-xs" id="adModalPreview"></div>
+</div>
+</div>
+<div class="mt-6 flex justify-end gap-2">
+<button class="px-4 py-2.5 rounded-xl text-sm font-medium bg-slate-100 text-slate-600 hover:bg-slate-200" onclick="toggleAdModal(false)">Tutup</button>
+<button class="px-5 py-2.5 rounded-xl text-sm font-semibold bg-supa-emerald text-white hover:bg-emerald-600 shadow-md shadow-emerald-500/20" onclick="saveAdConfig()">
+<i class="fa-solid fa-floppy-disk mr-1.5"></i> Simpan Iklan
+                </button>
+</div>
+</div>
+</div>
+<!-- LAYOUT UTAMA BERGAYA SUPAPOS -->
+<div class="flex h-screen overflow-hidden">
+<!-- SIDEBAR KIRI (HIJAU TUA SUPAPOS) -->
+<aside class="w-64 bg-supa-dark text-white flex flex-col justify-between shrink-0 transition-all duration-300 z-30 fixed md:static inset-y-0 left-0 -translate-x-full md:translate-x-0" id="sidebar">
+<div>
+<!-- Brand & Logo Kampus -->
+<div class="h-16 px-5 flex items-center justify-between border-b border-white/10">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-xl bg-white p-0.5 shadow-md flex items-center justify-center overflow-hidden shrink-0">
+<img alt="Logo PBK" class="w-full h-full object-cover rounded-lg" id="rsLogoImg" onerror="this.onerror=null; this.src='https://placehold.co/100x100/10B981/FFFFFF?text=PBK';" src="images/logo.png"/>
+</div>
+<div>
+<h1 class="font-extrabold text-base tracking-tight text-white flex items-center gap-1.5">
+                                SIM LOGISTIK
+                                <span class="text-[10px] bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded font-semibold">PRO</span>
+</h1>
+<p class="text-[11px] text-emerald-200/70 truncate max-w-[170px]" id="sidebarSubTitle">Politeknik Bhakti Kartini</p>
+</div>
+</div>
+<button class="md:hidden text-emerald-200 hover:text-white" onclick="toggleMobileSidebar()">
+<i class="fa-solid fa-xmark text-lg"></i>
+</button>
+</div>
+<!-- Pemilih Peran Cepat (Simulasi Multi-Role untuk Demo & Uji Alur) -->
+<div class="px-4 pt-4 pb-2">
+<label class="text-[10px] font-bold uppercase tracking-wider text-emerald-300/70 block mb-1.5">Uji Peran Pengguna (Sesi Aktif)</label>
+<select class="w-full bg-supa-darker text-white text-xs font-semibold rounded-xl px-3 py-2.5 border border-emerald-500/30 focus:outline-none focus:border-emerald-400 cursor-pointer" id="roleSwitcher" onchange="switchUserRole(this.value)">
+<option value="ka_baak">Kepala BAAK (Administrasi Akademik)</option>
+<option value="ka_lab">Kepala Laboratorium</option>
+<option value="ka_perpus">Kepala Perpustakaan</option>
+<option value="manager">Manager Logistik / Wadir II</option>
+<option selected="" value="admin">Admin Gudang Logistik</option>
+<option value="direktur">Direktur Politeknik</option>
+</select>
+</div>
+<!-- Menu Navigasi (Bergaya PBK) -->
+<nav class="px-3 py-3 space-y-1" id="sidebarNav"></nav>
+</div>
+<!-- Kotak Bantuan -->
+<div class="p-4 space-y-2.5">
+
+<div class="bg-white/5 rounded-2xl p-3 flex items-center justify-between">
+<div class="text-[11px]">
+<p class="font-semibold text-white">Butuh Bantuan?</p>
+<p class="text-emerald-200/60">Hubungi Tim IT Logistik</p>
+</div>
+<button class="px-3 py-1.5 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 rounded-lg text-xs font-semibold transition" onclick="contactWhatsAppSupport()">
+<i class="fa-brands fa-whatsapp mr-1"></i> Chat
+                    </button>
+</div>
+</div>
+</aside>
+<!-- AREA KONTEN TENGAH & KANAN -->
+<div class="flex-1 flex flex-col h-full overflow-hidden">
+<!-- TOPBAR (HIJAU GELAP SUPAPOS) -->
+<header class="h-16 bg-supa-dark text-white px-4 lg:px-6 flex items-center justify-between shrink-0 border-b border-white/10">
+<div class="flex items-center gap-3">
+<button class="md:hidden w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center text-white" onclick="toggleMobileSidebar()">
+<i class="fa-solid fa-bars"></i>
+</button>
+<div>
+<span class="font-bold text-sm sm:text-base tracking-tight" id="welcomeHeader">Welcome back, NUR!</span>
+</div>
+</div>
+<!-- Jam Realtime Tengah -->
+<div class="hidden lg:flex items-center gap-2 text-xs text-emerald-100/80 bg-supa-darker px-3.5 py-1.5 rounded-full border border-white/10">
+<i class="fa-regular fa-calendar-check text-emerald-400"></i>
+<span id="liveClock">Senin, 16 Nov 2026 • 22.30.37</span>
+</div>
+<!-- Notifikasi, Tombol Iklan & Profil Kanan -->
+<div class="flex items-center gap-3">
+<button class="hidden sm:flex items-center gap-1.5 text-xs bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-400/30 px-3 py-1.5 rounded-xl font-semibold transition" id="quickAdBtn" onclick="toggleAdModal(true)" style="display: inline-flex;">
+<i class="fa-solid fa-bullhorn"></i> Set Iklan
+                    </button>
+<!-- Lonceng Approval -->
+<button class="relative w-9 h-9 rounded-xl bg-white/10 hover:bg-white/15 flex items-center justify-center transition" onclick="navigateTo('approval')" title="Pesanan Menunggu Persetujuan">
+<i class="fa-regular fa-bell"></i>
+<span class="absolute -top-1 -right-1 w-5 h-5 bg-rose-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-supa-dark" id="notifBadge">1</span>
+</button>
+<!-- Profil User -->
+<div class="flex items-center gap-2.5 pl-2 border-l border-white/10">
+<div class="w-9 h-9 rounded-full bg-amber-400 text-slate-900 font-extrabold text-sm flex items-center justify-center shadow-inner" id="userAvatar">NS</div>
+<div class="hidden sm:block text-left leading-tight">
+<p class="text-xs font-bold text-white" id="activeUserName">NUR SARIFUDIN, S.Kom</p>
+<p class="text-[11px] text-emerald-300" id="activeUserRole">Admin Logistik (GUDANG)</p>
+</div>
+</div>
+</div>
+</header>
+<!-- BODY UTAMA: TENGAH (DASHBOARD/TABEL) + PANEL KANAN (QUICK ORDER / KERANJANG SUPAPOS) -->
+<div class="flex-1 flex overflow-hidden">
+<!-- PANEL TENGAH (SCROLLABLE) -->
+<main class="flex-1 overflow-y-auto p-4 lg:p-6 space-y-6">
+<!-- BANNER IKLAN / PENGUMUMAN DINAMIS (BISA GAMBAR ATAU VIDEO) -->
+<div class="bg-white rounded-2xl p-4 supa-shadow border border-emerald-500/20 relative overflow-hidden" id="adBannerWrapper">
+<div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+<div class="space-y-1 max-w-xl">
+<div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-700">
+<i class="fa-solid fa-bullhorn"></i> <span id="adBannerTag">INFO &amp; PENGUMUMAN INTERNAL PBK</span>
+</div>
+<h2 class="text-base sm:text-lg font-extrabold text-slate-800" id="adBannerTitle">Sosialisasi Standar LOGISTIK NUR SARIFUDIN</h2>
+<p class="text-xs text-slate-500">Admin dapat mengganti banner ini dengan mudah cukup menempelkan URL Gambar atau Video YouTube/MP4.</p>
+<div class="pt-1 flex flex-wrap items-center gap-2">
+<a class="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-600 hover:text-emerald-700" href="https://wa.me/6289518000755" id="adBannerLink" target="_blank">
+                                        Buka Tautan Informasi <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+</a>
+<button class="text-xs font-semibold text-slate-500 hover:text-slate-800 bg-slate-100 hover:bg-slate-200 px-2.5 py-1 rounded-lg transition" id="editAdInlineBtn" onclick="toggleAdModal(true)" style="display: inline-flex;">
+<i class="fa-solid fa-pen-to-square mr-1"></i> Ubah Link Gambar/Video
+                                    </button>
+</div>
+</div>
+<!-- Media Container (Gambar atau Video) -->
+<div class="w-full lg:w-80 h-40 rounded-xl overflow-hidden bg-slate-900 shrink-0 border border-slate-200 flex items-center justify-center relative" id="adMediaContainer"></div>
+</div>
+</div>
+<!-- HEADER HALAMAN DINAMIS & TOMBOL EXPORT -->
+<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+<div>
+<h2 class="text-xl sm:text-2xl font-extrabold text-slate-800 tracking-tight" id="pageHeading">Pengaturan Kuota Permintaan Unit</h2>
+<p class="text-xs sm:text-sm text-slate-500" id="pageSubheading">Tetapkan batas permintaan mingguan &amp; bulanan per unit. Unit * berlaku umum, sedangkan aturan khusus unit mengalahkan aturan umum.</p>
+</div>
+<div class="flex flex-wrap items-center gap-2">
+<button class="px-3.5 py-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-xl text-xs font-semibold supa-shadow flex items-center gap-1.5 transition" onclick="exportExcel('katalog')">
+<i class="fa-solid fa-file-excel text-emerald-600"></i> Export Katalog
+                            </button>
+<button class="px-3.5 py-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-xl text-xs font-semibold supa-shadow flex items-center gap-1.5 transition" onclick="exportExcel('purchasing')">
+<i class="fa-solid fa-cart-flatbed text-blue-600"></i> Rekap Belanja Purchasing
+                            </button>
+<button class="px-3.5 py-2 bg-supa-emerald hover:bg-emerald-600 text-white rounded-xl text-xs font-semibold shadow-sm flex items-center gap-1.5 transition" onclick="exportExcel('laporan')">
+<i class="fa-solid fa-chart-pie"></i> Export Laporan Direktur
+                            </button>
+</div>
+</div>
+<!-- KONTENER VIEW DINAMIS -->
+<div class="space-y-6" id="mainViewContainer"></div>
+</main>
+<!-- PANEL KANAN BERGAYA SUPAPOS ("Quick Request / Keranjang Amprahan Unit") -->
+<aside class="w-80 xl:w-96 bg-white border-l border-slate-200/80 flex flex-col justify-between shrink-0 hidden lg:flex" id="quickCartPanel">
+<div class="p-5 border-b border-slate-100">
+<div class="flex items-center justify-between mb-3">
+<div>
+<h3 class="font-extrabold text-base text-slate-800">Quick Order Rutin</h3>
+<p class="text-xs text-slate-500" id="cartUnitLabel">Unit Pemesan: <span class="font-bold text-emerald-600">BAAK</span></p>
+</div>
+<span class="px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-600 border border-emerald-200" id="cartCountBadge">0 Jenis</span>
+</div>
+<!-- Pencarian Cepat Barang -->
+<div class="relative">
+<i class="fa-solid fa-magnifying-glass absolute left-3.5 top-3 text-slate-400 text-xs"></i>
+<input class="w-full pl-9 pr-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-emerald-500 focus:bg-white transition" id="quickSearchInput" oninput="renderQuickCatalog()" placeholder="Cari kode / nama barang..." type="text"/>
+</div>
+<!-- Filter Kategori Pil (Persis PBK) -->
+<div class="mt-3">
+<span class="text-[11px] font-semibold text-slate-400 block mb-1.5">Kategori Barang</span>
+<div class="flex flex-wrap gap-1.5" id="quickCategoryPills"></div>
+</div>
+</div>
+<!-- Daftar Barang Quick Add & Keranjang -->
+<div class="flex-1 overflow-y-auto p-4 space-y-4">
+<div>
+<div class="flex items-center justify-between text-xs font-bold text-slate-500 mb-2">
+<span>Katalog Cepat &amp; Sisa Kuota</span>
+<span class="text-[10px] text-emerald-600">Klik + untuk tambah</span>
+</div>
+<div class="space-y-2 max-h-52 overflow-y-auto pr-1" id="quickCatalogList"></div>
+</div>
+<div class="border-t border-slate-100 pt-3">
+<div class="flex items-center justify-between text-xs font-bold text-slate-700 mb-2">
+<span>Keranjang Permintaan (<span id="cartItemTotal">0</span> item)</span>
+<button class="text-[11px] text-rose-500 hover:underline font-medium" onclick="clearCart()">Kosongkan</button>
+</div>
+<div class="space-y-2.5" id="cartItemsContainer"></div>
+</div>
+</div>
+<!-- Footer Checkout Keranjang (Persis PBK) -->
+<div class="p-5 bg-slate-50/70 border-t border-slate-200/80 space-y-3">
+<div class="space-y-1 text-xs">
+<div class="flex justify-between text-slate-500">
+<span>Unit Peminta</span>
+<span class="font-semibold text-slate-700" id="checkoutUnitName">BAAK</span>
+</div>
+<div class="flex justify-between text-slate-500">
+<span>Status Validasi Kuota</span>
+<span class="font-semibold text-emerald-600"><i class="fa-solid fa-shield-check"></i> Sesuai Jatah</span>
+</div>
+<div class="flex justify-between text-sm font-extrabold text-slate-800 pt-1 border-t border-slate-200">
+<span>Estimasi Nilai Barang</span>
+<span id="cartTotalValue">Rp 0</span>
+</div>
+</div>
+<button class="w-full py-3 px-4 bg-supa-emerald hover:bg-emerald-600 text-white font-bold text-xs sm:text-sm rounded-xl shadow-lg shadow-emerald-500/25 transition flex items-center justify-center gap-2" onclick="submitRoutineOrder()">
+<i class="fa-solid fa-paper-plane"></i> Kirim Permintaan Rutin
+                        </button>
+</div>
+</aside>
+</div>
+</div>
+</div>
+<script src="js/app.js"></script>
+</body>
+</html>
